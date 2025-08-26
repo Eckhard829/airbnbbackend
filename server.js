@@ -5,44 +5,48 @@ const mongoose = require('mongoose');
 const listingRoutes = require('./routes/listings');
 const reservationRoutes = require('./routes/reservations');
 const authRoutes = require('./routes/auth');
-const jwt = require('jsonwebtoken');
+const { authMiddleware } = require('./middleware/auth');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-const authenticateToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'No token provided' });
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
-    req.user = user;
-    next();
-  });
-};
+// Health check route
+app.get('/', (req, res) => res.send('Airbnb Backend API - Healthy'));
 
-app.get('/', (req, res) => res.send('Healthy'));
-
-const { MONGO_URI } = process.env;
+// Check for required environment variables
+const { MONGO_URI, JWT_SECRET } = process.env;
 if (!MONGO_URI) {
   console.error('MONGO_URI is not defined in .env');
   process.exit(1);
 }
+if (!JWT_SECRET) {
+  console.error('JWT_SECRET is not defined in .env');
+  process.exit(1);
+}
+
 console.log('Attempting connection with MONGO_URI:', MONGO_URI);
 
 mongoose.connect(MONGO_URI).then(() => {
   console.log('Connected to MongoDB');
-  app.use('/api/listings', listingRoutes);
-  app.use('/api/reservations', authenticateToken, reservationRoutes);
+  
+  // Routes
   app.use('/api/auth', authRoutes);
+  app.use('/api/listings', listingRoutes);
+  app.use('/api/reservations', reservationRoutes); // Auth middleware is applied in the route file
 
+  // Global error handler
   app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   });
 
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 }).catch(err => {
   console.error('MongoDB connection error:', err.message);
+  process.exit(1);
 });

@@ -19,7 +19,7 @@ mongoose.connect(process.env.MONGO_URI).then(async () => {
   const userPassword = await bcrypt.hash('user123', 10);
   const users = await User.create([
     { email: 'admin@example.com', password: adminPassword, name: 'Admin User', isAdmin: true, role: 'admin' },
-    { email: 'host@host.com', password: host123, name: 'Host User', isAdmin: false, role: 'host' },
+    { email: 'host@host.com', password: hostPassword, name: 'Host User', isAdmin: false, role: 'host' },
     { email: 'user@example.com', password: userPassword, name: 'Regular User', isAdmin: false, role: 'user' }
   ]);
 
